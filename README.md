@@ -37,7 +37,7 @@ docker-compose up -d --build # builder the docker container in detached mode
 
 ### Disclaimer: 
 
-No financial strings attached, just vibes. Zenon lore and vibes. 
+No financial strings attached, just vibes. Zenon lore, reply guyz and vibes. 
 
 This project is an example design for a community-focused awareness campaign featuring a reputation/social token system (like in-game points). It's a journey.  
 
