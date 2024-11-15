@@ -35,12 +35,25 @@ docker-compose up -d --build # builder the docker container in detached mode
 ```
 
 
-#### Disclaimer: 
-- This code showcases an example design for an incentivised awareness campaign with an earning component of a reputation/social token similar to ingame points that aren't tradeable or used for investment purposes.
-- The code is provided as is and the writer does not accept liability for any users choosing to use or adapt this code.
-- This campaign and the $REPLY token are designed solely for community engagement and narrative development.
-- $REPLY has no financial value, is not an investment, and is only meant for use within the Zenon awareness campaign ecosystem as a social reward for participation.
-- Zenon encourages all users to approach the campaign for fun and interaction, without financial expectations.
-- This is not financial or technical advice. Crypto is very risky and you may lose all your invested capital.  
-- The code is intended purely as an illustrative example and is not intended for direct deployment without further development, security measures, and customisation by qualified personnel.
-- Any parties adapting this code are responsible for conducting their own technical, security, and regulatory review, especially if $REPLY or similar tokens are introduced in other contexts. 
+### Disclaimer: 
+
+No financial strings attached, just vibes. Zenon lore and vibes. 
+
+This project is an example design for a community-focused awareness campaign featuring a reputation/social token system (like in-game points). It's a journey.  
+
+_Please keep the following in mind:_  
+
+**Vibes:** Enjoy the campaign for what it is—a chance to vibe, interact and develop with the community. 
+
+**Purpose:** 
+The \$REPLY token is designed for fun, community engagement, and participation within the Zenon ecosystem. It has no financial value, is not tradable, and should not be considered an investment.  
+
+**No Guarantees:** This code is provided "as is" without any warranties or guarantees. Use or adapt it as you see fit, but at your own risk.  
+
+**For Illustration Only:** This code is intended as an example and is not ready for direct deployment. Further development, security measures, and customisation by qualified professionals are needed before any real-world use.  
+
+**No Liability:** The author is not responsible for how this code is used or adapted.    
+
+**Not Financial or Technical Advice:** This is not financial or technical advice. Cryptocurrency projects are highly risky and speculative. You may lose all your invested capital. Approach thoughtfully and responsibly.    
+
+**Your Responsibility:** If you adapt this code, you are responsible for ensuring it meets all technical, security, and regulatory requirements, especially if $REPLY or similar tokens are used in other contexts.  
