@@ -1,0 +1,40 @@
+services:
+  app:
+    image: reply_guyz-app
+    build: .
+    environment:
+      CHATGPT_SECRETKEY_PROJECT: ${CHATGPT_SECRETKEY_PROJECT}
+      DATABASE: ${DATABASE}
+      DB_HOST_PROD: ${DB_HOST_PROD}
+      DB_PORT_PROD: ${DB_PORT_PROD}
+      DB_PW: ${DB_PW}
+      DB_USER: ${DB_USER}
+      ENV: ${ENV}
+      PYTHONSTARTUP: ${PYTHONSTARTUP}
+    volumes:
+      - .:/app
+    working_dir: /app
+    depends_on:
+      - mysql
+    restart: always
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PW}
+      MYSQL_DATABASE: ${DATABASE}
+      MYSQL_USER: ${DB_USER}
+      MYSQL_PASSWORD: ${DB_PW}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    command: [
+      "--character-set-server=utf8mb4",
+      "--collation-server=utf8mb4_unicode_ci",
+      "--local-infile=1"
+    ]
+
+volumes:
+  mysql_data:

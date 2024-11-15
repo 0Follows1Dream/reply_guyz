@@ -1,0 +1,17 @@
+[MASTER]
+load-plugins=pylint.extensions.docparams
+ignore-patterns=^.*\.md$, ^.*\.txt$, ^.*\.rst$, ^.*\.toml$
+
+[BASIC]
+# Naming conventions
+variable-rgx=[a-z_][a-z0-9_]{0,30}$
+function-rgx=[a-z_][a-z0-9_]{2,30}$
+method-rgx=[a-z_][a-z0-9_]{2,30}$
+argument-rgx=[a-z_][a-z0-9_]{0,30}$
+attr-rgx=[a-z_][a-z0-9_]{0,30}$
+
+[FORMAT]
+max-line-length=110  # work with black ignoring initial space, black formats to 110 characters
+
+[MESSAGES CONTROL]
+disable=W9008,R0913  # Ignore redundant returns documentation and too many arguments in a function

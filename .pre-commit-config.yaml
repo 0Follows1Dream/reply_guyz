@@ -1,0 +1,79 @@
+repos:
+
+  # BLACK: The uncompromising Python code formatter
+  - repo: https://github.com/psf/black
+    rev: 24.10.0
+    hooks:
+      - id: black
+
+  # ISORT: An import sorter for python
+  - repo: https://github.com/pre-commit/mirrors-isort
+    rev: v5.10.1
+    hooks:
+      - id: isort
+        args: ["--profile", "black"]
+
+  # Ruff: Python linter using a local hook
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff
+        entry: ruff check --fix  # This runs ruff in linter mode and fixes issues automatically
+        language: system
+        types: [python]
+
+  # Standardises your Git commit messages for readable/professional version control
+  - repo: https://github.com/commitizen-tools/commitizen
+    rev: v3.30.1
+    hooks:
+      - id: commitizen
+        stages: [commit-msg]
+
+  # create .mypy_cache before running
+  - repo: local
+    hooks:
+      - id: ensure-mypy-cache
+        name: Ensure .mypy_cache Directory Exists
+        entry: bash -c "mkdir -p .mypy_cache"
+        language: system
+        pass_filenames: false
+
+  # Static type checker for Python
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.13.0
+    hooks:
+      - id: mypy
+        args:
+          - "--install-types"
+          - "--ignore-missing-imports"
+          - "--non-interactive"  # To avoid interactive prompts when installing types
+          - "--cache-dir=.mypy_cache"  # Explicitly set the cache directory
+        additional_dependencies:
+          - types-requests  # This ensures that the requests type stubs are available in the pre-commit environment
+
+#  # Testing framework for Python
+#  - repo: local
+#    hooks:
+#      - id: pytest
+#        name: pytest
+#        entry: pytest
+#        language: system
+#        types: [python]
+#        args: [--verbose, --rootdir=tests, tests, --ignore=fetchers, --ignore=main.py]  # Specify the tests directory explicitly
+
+  # Security linter to detect common security issues in python code
+  - repo: https://github.com/PyCQA/bandit
+    rev: 1.7.10
+    hooks:
+      - id: bandit
+        args: ["-r", "."]
+
+  # Safety: Python dependency vulnerability scanner using a local hook
+  - repo: local
+    hooks:
+      - id: safety
+        name: safety
+        entry: safety check -r requirements.txt
+        language: system
+        types: [python]
+        pass_filenames: false  # Prevents passing file paths to the safety command

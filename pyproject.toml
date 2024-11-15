@@ -1,0 +1,10 @@
+[tool.black]
+line-length = 100
+[tool.commitizen]
+name = "cz_conventional_commits"
+version = "1.0.0"
+tag_format = "v$version"
+bump_message = "chore(release): bump version to $version"
+changelog_file = "CHANGELOG.md"
+changelog_incremental = true
+update_changelog = true
