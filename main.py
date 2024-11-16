@@ -3,7 +3,7 @@ import time
 from threading import Thread
 from typing import Callable
 
-from utils.logger import get_logger
+from utils.custom_logger import get_logger
 
 # Get a logger for the module
 logger = get_logger(__name__)
