@@ -3,7 +3,7 @@ import time
 from threading import Thread
 from typing import Callable
 
-from utils.logging import get_logger
+from utils.logger import get_logger
 
 # Get a logger for the module
 logger = get_logger(__name__)
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     logger.info("Application has finished.")
 
     # run_threaded(lambda: run_script("module."))
-    # schedule.every().sunday.at("03:00").do(run_threaded, function)
+    # schedule.every().sunday.at("03:21").do(run_threaded, function)
 
     while True:
         time.sleep(3600)  # Sleep for 60 seconds

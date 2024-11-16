@@ -18,9 +18,11 @@ services:
     depends_on:
       - mysql
     restart: always
+    networks:
+      - prod_network
 
   mysql:
-    container_name: mysql  
+    container_name: mysql
     build:
         context: .
         dockerfile: Dockerfile.mysql
@@ -29,8 +31,7 @@ services:
       MYSQL_DATABASE: ${DATABASE}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PW}
-    ports:
-      - "127.0.0.1:3306:3306"  # Expose port for dev; remove for prod
+    ports: []
     volumes:
       - mysql_data:/var/lib/mysql
     command: [
@@ -39,6 +40,12 @@ services:
       "--local-infile=1"
     ]
     restart: always
+    networks:
+      - prod_network
 
 volumes:
   mysql_data:
+
+networks:
+  prod_network:
+    driver: overlay

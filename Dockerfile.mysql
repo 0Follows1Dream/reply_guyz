@@ -1,0 +1,6 @@
+FROM mysql:8.0
+
+# Install gettext for environment variable substitution and basic debugging tools
+RUN microdnf install -y gettext procps-ng net-tools && microdnf clean all
+
+
