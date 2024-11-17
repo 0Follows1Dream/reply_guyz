@@ -258,11 +258,17 @@ def create_database_table(table_name: str):
 
     # Mapping table names to their respective SQL creation queries
     table_creation_queries = {
-        "table_xyz": """
-            CREATE TABLE table_xyz (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            time DATETIME
-            );
+        "user_actions": """
+        CREATE TABLE user_actions (
+        id INT AUTO_INCREMENT PRIMARY KEY,        -- Unique identifier for each action
+        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Time the action occurred
+        user_id BIGINT NOT NULL,                  -- Telegram user ID (mandatory)
+        username VARCHAR(255),                   -- Optional Telegram username
+        action VARCHAR(255) NOT NULL,            -- Action type (e.g., "start", "agree")
+        details TEXT,                            -- Additional details about the action
+        output TEXT,                             -- Response or result of the action
+        metadata JSON                            -- Flexible field for additional data (as JSON or plain text)
+        );
         """,
     }
 

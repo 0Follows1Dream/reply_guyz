@@ -29,14 +29,17 @@ services:
       MYSQL_DATABASE: ${DATABASE}
       MYSQL_USER: ${DB_USER}
       MYSQL_PASSWORD: ${DB_PW}
+      TZ: UTC  
     ports:
       - "127.0.0.1:3306:3306"  # Expose port for dev; remove for prod
     volumes:
+      - .:/app  
       - mysql_data:/var/lib/mysql
     command: [
       "--character-set-server=utf8mb4",
       "--collation-server=utf8mb4_unicode_ci",
-      "--local-infile=1"
+      "--local-infile=1",
+      "--default-time-zone=+00:00"   
     ]
     restart: always
 
