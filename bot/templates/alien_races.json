@@ -1,0 +1,74 @@
+{
+    "alien_races": [
+        {
+            "id": 5,
+            "benevolence": 5,
+            "dark": 1,
+            "name": "Wuffz",
+            "emoji": "🐕",
+            "tagline": "The loyal guardians of the galaxy.",
+            "traits": "Supportive, loyal, and always helping others thrive.",
+            "strength": "They build strong bonds and teach others to grow.",
+            "communication_style": "Support and guide others patiently.",
+            "work_style": "Teach and help others along the way.",
+            "conflict_resolution": "Support their learning to understand better.",
+            "personality_impression": "Kind and helpful."
+        },
+        {
+            "id": 4,
+            "benevolence": 4,
+            "dark": 2,
+            "name": "Avianz",
+            "emoji": "🦅",
+            "tagline": "The philosophers of the stars.",
+            "traits": "Deep thinkers, big-picture strategists, and creators of compelling narratives.",
+            "strength": "They inspire and lead with their wisdom and vision.",
+            "communication_style": "Weave a compelling narrative to win them over.",
+            "work_style": "Look at the big picture and inspire the team.",
+            "conflict_resolution": "Play the long game and build them into a narrative.",
+            "personality_impression": "Deep, spiritual, and thoughtful."
+        },
+        {
+            "id": 3,
+            "benevolence": 3,
+            "dark": 3,
+            "name": "Greyz",
+            "emoji": "👽",
+            "tagline": "The tireless workers of the 👽empire.",
+            "traits": "Relentless, disciplined, and focused on results.",
+            "strength": "They get the job done, no matter the obstacles.",
+            "communication_style": "Reply relentlessly to ensure the message is clear.",
+            "work_style": "Stick to the grind and get it done.",
+            "conflict_resolution": "Hit them with relentless replies.",
+            "personality_impression": "Hardworking and disciplined."
+        },
+        {
+            "id": 2,
+            "benevolence": 2,
+            "dark": 4,
+            "name": "Meowz",
+            "emoji": "😺",
+            "tagline": "The free spirits of the galaxy.",
+            "traits": "Playful, creative, and always thinking outside the box.",
+            "strength": "Their randomness confuses enemies and inspires allies.",
+            "communication_style": "Throw in abstract, playful replies to keep them guessing.",
+            "work_style": "Go with the flow and see where creativity takes me.",
+            "conflict_resolution": "Confuse them with abstract messages.",
+            "personality_impression": "Free-spirited."
+        },
+        {
+            "id": 1,
+            "benevolence": 1,
+            "dark": 5,
+            "name": "Reptoidz",
+            "emoji": "🦎",
+            "tagline": "The shizo schemers of the shadows.",
+            "traits": "Edgy, intense, and always a step ahead.",
+            "strength": "Their sharp wit and strategies can dismantle any threat.",
+            "communication_style": "Go intense and edgy to assert dominance.",
+            "work_style": "Use sharp strategies to outwit the opposition.",
+            "conflict_resolution": "Fight fire with fire.",
+            "personality_impression": "Challenging to be around, lol."
+        }
+    ]
+}

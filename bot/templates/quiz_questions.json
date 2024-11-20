@@ -1,0 +1,48 @@
+{
+    "quiz": [
+        {
+            "question_id": 1,
+            "question_text": "The 👽empire needs your communication skills. How do you handle intergalactic diplomacy?",
+            "options": [
+                { "text": "Support and guide others patiently", "alien_race_id": 5 },
+                { "text": "Weave a compelling narrative to win them over", "alien_race_id": 4 },
+                { "text": "Reply relentlessly to ensure the message is clear", "alien_race_id": 3 },
+                { "text": "Throw in abstract, playful replies to keep them guessing", "alien_race_id": 2 },
+                { "text": "Go intense and edgy to assert dominance", "alien_race_id": 1 }
+            ]
+        },
+        {
+            "question_id": 2,
+            "question_text": "When working on a galactic project, what’s your approach?",
+            "options": [
+                { "text": "Teach and help others along the way", "alien_race_id": 5 },
+                { "text": "Look at the big picture and inspire the team", "alien_race_id": 4 },
+                { "text": "Stick to the grind and get it done", "alien_race_id": 3 },
+                { "text": "Go with the flow and see where creativity takes me", "alien_race_id": 2 },
+                { "text": "Use sharp strategies to outwit the opposition", "alien_race_id": 1 }
+            ]
+        },
+        {
+            "question_id": 3,
+            "question_text": "How do you fight FUD (Fear, Uncertainty, Doubt)?",
+            "options": [
+                { "text": "Support their learning to understand better", "alien_race_id": 5 },
+                { "text": "Play the long game and build them into a narrative", "alien_race_id": 4 },
+                { "text": "Hit them with relentless replies", "alien_race_id": 3 },
+                { "text": "Confuse them with abstract messages", "alien_race_id": 2 },
+                { "text": "Fight fire with fire", "alien_race_id": 1 }
+            ]
+        },
+        {
+            "question_id": 4,
+            "question_text": "How would other aliens describe you?",
+            "options": [
+                { "text": "Kind and helpful", "alien_race_id": 5 },
+                { "text": "Deep, spiritual, and thoughtful", "alien_race_id": 4 },
+                { "text": "Hardworking and disciplined", "alien_race_id": 3 },
+                { "text": "Free-spirited", "alien_race_id": 2 },
+                { "text": "Challenging to be around, lol", "alien_race_id": 1 }
+            ]
+        }
+    ]
+}

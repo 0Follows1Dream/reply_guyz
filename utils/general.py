@@ -5,10 +5,13 @@ Created
 @links:
 @description:
 """
+
 # ┌─────────┐
 # │ Imports │
 # └─────────┘
 
+import json
+import os
 import re
 import time
 from typing import Any, Dict, List, Optional
@@ -149,6 +152,19 @@ def convert_float_to_int(df: pd.DataFrame, columns: list) -> pd.DataFrame:
     for col in columns:
         df[col] = df[col].astype("Int64").astype(str).replace("<NA>", np.nan)
     return df
+
+
+def load_template_msg(file_name, templates_dir=os.path.join("bot", "templates")):
+    file_path = os.path.join(templates_dir, file_name)
+    with open(file_path, "r", encoding="utf-8") as file:
+        return file.read()
+
+
+def load_template_json(file_name, templates_dir=os.path.join("bot", "templates")):
+    file_path = os.path.join(templates_dir, file_name)
+    with open(file_path, "r", encoding="utf-8") as f:
+        json_data = json.load(f)
+    return json_data
 
 
 # ┌─────────────────────┐
