@@ -5,6 +5,7 @@ Created 20 November 2024
 @links:
 @description:
 """
+
 # ┌─────────┐
 # │ Imports │
 # └─────────┘
@@ -95,7 +96,11 @@ async def dream_prompt(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     await query.edit_message_text("Let's go.")
 
-    dream_message = "An empire of $REPLY guyz can change the world and make NoM dreams come true...\nWhat's your dream? 🌟\n_Note: This will remain anonymous and be worked towards by the reply guyz..._"
+    dream_message = (
+        "An empire of $REPLY guyz can change the world and make NoM dreams come true...\n"
+        "What's your dream? 🌟\n"
+        "_Note: This will remain anonymous and be worked towards by the reply guyz..._"
+    )
     await query.message.reply_text(dream_message, parse_mode="Markdown")
     return "COLLECT_DREAM"
 
@@ -110,8 +115,8 @@ async def collect_dream(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user.id,
         user.username,
         "dream_shared",
-        f"User shared their dream: {user_dream}",
-        bot_response,
+        "User shared their dream",
+        user_dream,
     )
 
     await update.message.reply_text(bot_response)
@@ -197,13 +202,13 @@ async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
         race_name = "Unknown"
         response_text = "You have chosen an unknown alien race."
 
-    # Log the individual quiz answer
+    # Log the individual quiz answer with simplified details
     log_user_action(
         user.id,
         user.username,
         "quiz_answer",
-        f"Question {question_index + 1}: User selected alien race ID {alien_race_id} ({race_name})",
-        "Answer logged",
+        f"Question {question_index + 1}: Suggested alien race",
+        race_name,
     )
 
     await query.answer()
@@ -258,13 +263,13 @@ async def determine_matched_alien_race(update: Update, context: ContextTypes.DEF
         race_name = "Unknown"
         final_message = "You've been matched with an unknown alien race."
 
-    # Log the final matched alien race
+    # Log the final matched alien race with simplified details
     log_user_action(
         user.id,
         user.username,
-        "quiz_result",
-        f"User matched with alien race ID {most_common_race_id} ({race_name})",
-        "Quiz completed",
+        "alien_race",
+        "Selected alien race",
+        race_name,
     )
 
     # Send the final message to the user

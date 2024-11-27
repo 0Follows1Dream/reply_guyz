@@ -39,7 +39,8 @@ services:
       "--character-set-server=utf8mb4",
       "--collation-server=utf8mb4_unicode_ci",
       "--local-infile=1",
-      "--default-time-zone=+00:00"   
+      "--default-time-zone=+00:00",
+      "--log-bin-trust-function-creators=1"
     ]
     restart: always
 

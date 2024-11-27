@@ -26,7 +26,8 @@ from bot.onboarding import (
     handle_quiz_answer,
     start,
 )
-from utils.db import create_database_table
+from bot.replies import add_replies_handlers
+from utils.db import create_database_table, db_query
 
 # ┌────────────┐
 # │ Parameters │
@@ -37,6 +38,13 @@ BOT_TOKEN = config("BOT_TOKEN")
 # ┌──────────┐
 # │ Programs │
 # └──────────┘
+
+create_database_table("user_actions")
+create_database_table("alien_race_teams")
+create_database_table("threads")
+
+
+dat = db_query("select * from user_actions order by timestamp desc")
 
 
 def main():
@@ -56,6 +64,9 @@ def main():
     )
 
     application.add_handler(conversation_handler)
+
+    add_replies_handlers(application)
+
     application.run_polling()
 
 

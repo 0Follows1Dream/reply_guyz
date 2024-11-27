@@ -249,36 +249,87 @@ def db_execute(query: str, params: Optional[Mapping[str, Union[str, int, float]]
 
 def create_database_table(table_name: str):
     """
-    Create database table if it doesn't exist.'
+    Create database table, indexes, and triggers if they don't exist.
 
     Args:
         table_name (str): The table name.
-
     """
-
     # Mapping table names to their respective SQL creation queries
     table_creation_queries = {
         "user_actions": """
         CREATE TABLE user_actions (
-        id INT AUTO_INCREMENT PRIMARY KEY,        -- Unique identifier for each action
-        timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Time the action occurred
-        user_id BIGINT NOT NULL,                  -- Telegram user ID (mandatory)
-        username VARCHAR(255),                   -- Optional Telegram username
-        action VARCHAR(255) NOT NULL,            -- Action type (e.g., "start", "agree")
-        details TEXT,                            -- Additional details about the action
-        output TEXT,                             -- Response or result of the action
-        metadata JSON                            -- Flexible field for additional data (as JSON or plain text)
+            id INT AUTO_INCREMENT PRIMARY KEY,        -- Unique identifier for each action
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Time the action occurred
+            user_id BIGINT NOT NULL,                  -- Telegram user ID (mandatory)
+            username VARCHAR(255),                   -- Optional Telegram username
+            action VARCHAR(255) NOT NULL,            -- Action type (e.g., "start", "agree")
+            details TEXT,                            -- Additional details about the action
+            output TEXT,                             -- Response or result of the action
+            metadata JSON                            -- Flexible field for additional data (as JSON or plain text)
         );
         """,
+        "alien_race_teams": """
+        CREATE TABLE alien_race_teams (
+            user_id BIGINT NOT NULL,                  
+            username VARCHAR(255),
+            alien_race VARCHAR(255),                  
+            updated_at TIMESTAMP
+        );
+        """,
+        "threads": """
+        CREATE TABLE threads (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            timestamp DATETIME NOT NULL,
+            thread_id INT NULL,
+            user_id BIGINT NOT NULL,
+            username VARCHAR(255),
+            category VARCHAR(255),
+            twitter_link VARCHAR(500),
+            FOREIGN KEY (thread_id) REFERENCES threads(id)
+    );""",
+    }
+
+    # Additional index creation queries for relevant tables
+    index_creation_queries = {
+        "alien_race_teams": """
+        CREATE UNIQUE INDEX idx_user_id ON alien_race_teams(user_id);
+        """
+    }
+
+    # Trigger creation queries
+    trigger_creation_queries = {
+        "user_actions": """
+        CREATE TRIGGER update_alien_race_teams
+        AFTER INSERT ON user_actions
+        FOR EACH ROW
+        BEGIN
+            IF NEW.action = 'alien_race' THEN
+                INSERT INTO alien_race_teams (user_id, username, alien_race, updated_at)
+                VALUES (NEW.user_id, NEW.username, NEW.output, NEW.timestamp)
+                ON DUPLICATE KEY UPDATE
+                    alien_race = NEW.output,
+                    updated_at = NEW.timestamp;
+            END IF;
+        END;
+        """
     }
 
     # Query to check if the table exists
-    q = """
+    table_exists_query = """
         SELECT EXISTS (
             SELECT 1 FROM information_schema.tables 
             WHERE table_schema = :database_name
             AND table_name = :table_name
         ) AS table_exists;
+    """
+
+    # Query to check if the trigger exists
+    trigger_exists_query = """
+        SELECT COUNT(*) AS trigger_count
+        FROM information_schema.triggers
+        WHERE trigger_schema = :database_name
+        AND event_object_table = :table_name
+        AND trigger_name = 'update_alien_race_teams';
     """
 
     database_name = get_engine().url.database
@@ -290,13 +341,26 @@ def create_database_table(table_name: str):
     params = {"database_name": database_name, "table_name": table_name}
 
     # Check if the table exists
-    exists = bool(db_query(q, params).iloc[0]["table_exists"])
+    table_exists = bool(db_query(table_exists_query, params).iloc[0]["table_exists"])
 
     # Create the table if it doesn't exist
-    if not exists:
+    if not table_exists:
         create_query = table_creation_queries.get(table_name)
         if create_query:
             db_execute(create_query)
+
+        # Create any associated indexes
+        index_query = index_creation_queries.get(table_name)
+        if index_query:
+            db_execute(index_query)
+
+    # Create triggers if they are defined for the table
+    trigger_query = trigger_creation_queries.get(table_name)
+    if trigger_query:
+        # Check if the trigger already exists
+        trigger_exists = bool(db_query(trigger_exists_query, params).iloc[0]["trigger_count"])
+        if not trigger_exists:
+            db_execute(trigger_query)
 
 
 def replace_special_characters_with_placeholders(df: pd.DataFrame) -> pd.DataFrame:
