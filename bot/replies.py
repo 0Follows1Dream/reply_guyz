@@ -146,14 +146,26 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     replied_thread_ids = set(user_replies_df["thread_id"].tolist())
 
+    # Get all thread IDs that the user has created
+    user_created_threads_df = db_query(
+        """
+        SELECT id
+        FROM threads
+        WHERE user_id = :user_id AND thread_id IS NULL
+        """,
+        {"user_id": user_id},
+    )
+
+    user_created_thread_ids = set(user_created_threads_df["id"].tolist())
+
     # Now, for each topic, determine if there are unreplied threads
     topic_has_unreplied = {}
     for topic in TOPICS:
         # Get thread IDs in this topic
         topic_threads = threads_df[threads_df["category"] == topic]
         topic_thread_ids = set(topic_threads["id"].tolist())
-        # Compute unreplied thread IDs
-        unreplied_thread_ids = topic_thread_ids - replied_thread_ids
+        # Compute unreplied thread IDs, excluding user's threads
+        unreplied_thread_ids = topic_thread_ids - replied_thread_ids - user_created_thread_ids
         if unreplied_thread_ids:
             topic_has_unreplied[topic] = True
         else:
@@ -388,7 +400,8 @@ async def noop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def add_replies_handlers(application):
     """Register all handlers for the bot."""
-    application.add_handler(CommandHandler("menu", menu))
+    # Updated command from "menu" to "reply"
+    application.add_handler(CommandHandler("reply", menu))
     application.add_handler(CallbackQueryHandler(topic_handler, pattern="^topic_"))
     application.add_handler(CallbackQueryHandler(reply_thread, pattern="^reply_thread_"))
     application.add_handler(CallbackQueryHandler(create_thread, pattern="^create_thread_"))

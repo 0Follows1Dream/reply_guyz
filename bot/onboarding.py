@@ -226,8 +226,7 @@ async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE)
     else:
         # All questions answered
         # Determine the most matched alien race
-        await determine_matched_alien_race(update, context)
-        return ConversationHandler.END
+        return await determine_matched_alien_race(update, context)
 
 
 async def determine_matched_alien_race(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -274,10 +273,49 @@ async def determine_matched_alien_race(update: Update, context: ContextTypes.DEF
 
     # Send the final message to the user
     await context.bot.send_message(chat_id=chat_id, text=final_message, parse_mode="Markdown")
-    await context.bot.send_message(
-        chat_id=chat_id,
-        text="Thank you for completing the quiz! You're all set to start your journey! 🚀",
+
+    # Prompt the user for their Twitter username using HTML formatting
+    message_text = (
+        "🚀 <b>Final Step...</b>\n\n"
+        "Please enter your <b>Twitter username</b> following these guidelines:\n"
+        "- Exact string\n"
+        "- Not the URL\n"
+        "- Without the '@'\n"
+        "- No spaces\n"
+        "- No whitespace\n\n"
+        "<b>Good luck! 👽 Enter Username:</b>"
     )
+
+    await context.bot.send_message(chat_id=chat_id, text=message_text, parse_mode="HTML")
+    return "COLLECT_TWITTER_USERNAME"  # Transition to the new state
+
+
+async def collect_twitter_username(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Handles the user's Twitter username submission."""
+    user = update.effective_user
+    twitter_username = update.message.text.strip().lstrip("@")  # Remove any '@' if present
+
+    # Log the Twitter username in user_actions
+    log_user_action(
+        user.id,
+        user.username,
+        "twitter_username",
+        "User provided Twitter username",
+        twitter_username,
+    )
+
+    # Send confirmation to the user
+    await update.message.reply_text(
+        f"Thank you! Your Twitter username @{twitter_username} has been recorded. Time for /reply guyz..."
+    )
+
+    # Import the menu function
+    from bot.replies import menu
+
+    # Automatically display the reply menu
+    await menu(update, context)
+
+    return ConversationHandler.END
 
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):

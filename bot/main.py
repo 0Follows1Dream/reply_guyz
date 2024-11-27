@@ -22,6 +22,7 @@ from telegram.ext import (
 from bot.onboarding import (
     cancel,
     collect_dream,
+    collect_twitter_username,
     dream_prompt,
     handle_quiz_answer,
     start,
@@ -59,6 +60,10 @@ def main():
             "DREAM_PROMPT": [CallbackQueryHandler(dream_prompt, pattern="^agree$")],
             "COLLECT_DREAM": [MessageHandler(filters.TEXT & ~filters.COMMAND, collect_dream)],
             "QUIZ_QUESTION": [CallbackQueryHandler(handle_quiz_answer)],
+            # Add the new state here
+            "COLLECT_TWITTER_USERNAME": [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_twitter_username)
+            ],
         },
         fallbacks=[CommandHandler("cancel", cancel)],
     )
