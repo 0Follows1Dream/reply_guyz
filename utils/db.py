@@ -11,6 +11,7 @@ Created
 
 import io
 import os
+import re
 import warnings
 from typing import Any, List, Mapping, Optional, Union
 
@@ -38,6 +39,23 @@ _connection: Optional[MySQLConnection] = None
 # ┌───────────────────┐
 # │ Engine Management │
 # └───────────────────┘
+
+
+def extract_trigger_table_name(trigger_query):
+    """
+    Extracts the table name on which the trigger is defined from the trigger creation SQL.
+
+    Args:
+        trigger_query (str): The SQL query to create the trigger.
+
+    Returns:
+        str: The table name on which the trigger is defined.
+    """
+    match = re.search(r"ON\s+(\w+)\s+FOR EACH ROW", trigger_query, re.IGNORECASE)
+    if match:
+        return match.group(1)
+    else:
+        raise ValueError("Could not extract trigger table name from the trigger creation query.")
 
 
 def create_sql_engine(env: Optional[str] = None, database: Optional[str] = None) -> Engine:
@@ -257,36 +275,53 @@ def create_database_table(table_name: str):
     # Mapping table names to their respective SQL creation queries
     table_creation_queries = {
         "user_actions": """
-        CREATE TABLE user_actions (
-            id INT AUTO_INCREMENT PRIMARY KEY,        -- Unique identifier for each action
-            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Time the action occurred
-            user_id BIGINT NOT NULL,                  -- Telegram user ID (mandatory)
-            username VARCHAR(255),                   -- Optional Telegram username
-            action VARCHAR(255) NOT NULL,            -- Action type (e.g., "start", "agree")
-            details TEXT,                            -- Additional details about the action
-            output TEXT,                             -- Response or result of the action
-            metadata JSON                            -- Flexible field for additional data (as JSON or plain text)
-        );
-        """,
+            CREATE TABLE user_actions (
+                id INT AUTO_INCREMENT PRIMARY KEY,        -- Unique identifier for each action
+                timestamp DATETIME DEFAULT CURRENT_TIMESTAMP, -- Time the action occurred
+                user_id BIGINT NOT NULL,                  -- Telegram user ID (mandatory)
+                username VARCHAR(255),                   -- Optional Telegram username
+                action VARCHAR(255) NOT NULL,            -- Action type (e.g., "start", "agree")
+                details TEXT,                            -- Additional details about the action
+                output TEXT,                             -- Response or result of the action
+                metadata JSON                            -- Flexible field for additional data (as JSON or plain text)
+            );
+            """,
         "alien_race_teams": """
-        CREATE TABLE alien_race_teams (
-            user_id BIGINT NOT NULL,                  
-            username VARCHAR(255),
-            alien_race VARCHAR(255),                  
-            updated_at TIMESTAMP
-        );
-        """,
+            CREATE TABLE alien_race_teams (
+                user_id BIGINT NOT NULL,                  
+                username VARCHAR(255),
+                alien_race VARCHAR(255),                  
+                updated_at TIMESTAMP
+            );
+            """,
         "threads": """
-        CREATE TABLE threads (
-            id INT AUTO_INCREMENT PRIMARY KEY,
-            timestamp DATETIME NOT NULL,
-            thread_id INT NULL,
-            user_id BIGINT NOT NULL,
-            username VARCHAR(255),
-            category VARCHAR(255),
-            twitter_link VARCHAR(500),
-            FOREIGN KEY (thread_id) REFERENCES threads(id)
-    );""",
+            CREATE TABLE threads (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                timestamp DATETIME NOT NULL,
+                thread_id INT NULL,
+                user_id BIGINT NOT NULL,
+                username VARCHAR(255),
+                category VARCHAR(255),
+                twitter_link VARCHAR(500),
+                FOREIGN KEY (thread_id) REFERENCES threads(id)
+            );
+            """,
+        "daily_tweet_counts": """
+            CREATE TABLE daily_tweet_counts (
+                user_id BIGINT NOT NULL,              -- Telegram user ID
+                timestamp DATE NOT NULL,              -- Date of the tweets (YYYY-MM-DD)
+                tweet_count INT DEFAULT 0,            -- Number of tweets for the day
+                PRIMARY KEY (user_id, timestamp)      -- Composite key ensures one record per user per day
+            );
+            """,
+        "weekly_categories": """
+            CREATE TABLE weekly_categories (
+                user_id BIGINT NOT NULL,
+                week_start_date DATE NOT NULL,
+                category VARCHAR(255) NOT NULL,
+                PRIMARY KEY (user_id, week_start_date, category)
+            );
+            """,
     }
 
     # Additional index creation queries for relevant tables
@@ -296,22 +331,55 @@ def create_database_table(table_name: str):
         """
     }
 
-    # Trigger creation queries
+    # Trigger creation queries mapped with their exact names
     trigger_creation_queries = {
-        "user_actions": """
-        CREATE TRIGGER update_alien_race_teams
-        AFTER INSERT ON user_actions
-        FOR EACH ROW
-        BEGIN
-            IF NEW.action = 'alien_race' THEN
-                INSERT INTO alien_race_teams (user_id, username, alien_race, updated_at)
-                VALUES (NEW.user_id, NEW.username, NEW.output, NEW.timestamp)
-                ON DUPLICATE KEY UPDATE
-                    alien_race = NEW.output,
-                    updated_at = NEW.timestamp;
-            END IF;
-        END;
-        """
+        "user_actions": [
+            (
+                "update_alien_race_teams",
+                """
+                    CREATE TRIGGER update_alien_race_teams
+                    AFTER INSERT ON user_actions
+                    FOR EACH ROW
+                    BEGIN
+                        IF NEW.action = 'alien_race' THEN
+                            INSERT INTO alien_race_teams (user_id, username, alien_race, updated_at)
+                            VALUES (NEW.user_id, NEW.username, NEW.output, NEW.timestamp)
+                            ON DUPLICATE KEY UPDATE
+                                alien_race = NEW.output,
+                                updated_at = NEW.timestamp;
+                        END IF;
+                    END;
+                    """,
+            )
+        ],
+        "threads": [
+            (
+                "update_daily_tweet_counts",
+                """
+                        CREATE TRIGGER update_daily_tweet_counts
+                        AFTER INSERT ON threads
+                        FOR EACH ROW
+                        BEGIN
+                            INSERT INTO daily_tweet_counts (user_id, timestamp, tweet_count)
+                            VALUES (NEW.user_id, DATE(NEW.timestamp), 1)
+                            ON DUPLICATE KEY UPDATE
+                                tweet_count = tweet_count + 1;
+                        END;
+                        """,
+            ),
+            (
+                "update_weekly_categories",
+                """
+                        CREATE TRIGGER update_weekly_categories
+                        AFTER INSERT ON threads
+                        FOR EACH ROW
+                        BEGIN
+                            INSERT IGNORE INTO weekly_categories (user_id, week_start_date, category)
+                            VALUES (NEW.user_id, DATE_SUB(DATE(NEW.timestamp), INTERVAL WEEKDAY(NEW.timestamp) DAY), NEW.category);
+                        END;
+                        """,
+            ),
+        ],
     }
 
     # Query to check if the table exists
@@ -325,11 +393,11 @@ def create_database_table(table_name: str):
 
     # Query to check if the trigger exists
     trigger_exists_query = """
-        SELECT COUNT(*) AS trigger_count
-        FROM information_schema.triggers
-        WHERE trigger_schema = :database_name
-        AND event_object_table = :table_name
-        AND trigger_name = 'update_alien_race_teams';
+    SELECT COUNT(*) AS trigger_count
+    FROM information_schema.triggers
+    WHERE trigger_schema = :database_name
+    AND event_object_table = :trigger_table  # Updated placeholder
+    AND trigger_name = :trigger_name;
     """
 
     database_name = get_engine().url.database
@@ -355,12 +423,29 @@ def create_database_table(table_name: str):
             db_execute(index_query)
 
     # Create triggers if they are defined for the table
-    trigger_query = trigger_creation_queries.get(table_name)
-    if trigger_query:
-        # Check if the trigger already exists
-        trigger_exists = bool(db_query(trigger_exists_query, params).iloc[0]["trigger_count"])
-        if not trigger_exists:
-            db_execute(trigger_query)
+    trigger_infos = trigger_creation_queries.get(table_name)
+    if trigger_infos:
+        # Ensure trigger_infos is a list
+        if not isinstance(trigger_infos, list):
+            trigger_infos = [trigger_infos]
+        for trigger_info in trigger_infos:
+            trigger_name, trigger_query = trigger_info  # Get exact trigger name and query
+
+            # Extract the table name on which the trigger is defined from the trigger creation SQL
+            trigger_table_name = extract_trigger_table_name(trigger_query)
+
+            trigger_params = {
+                "database_name": database_name,
+                "trigger_name": trigger_name,
+                "trigger_table": trigger_table_name,  # Using 'trigger_table' key
+            }
+
+            # Check if the trigger already exists
+            trigger_exists = bool(
+                db_query(trigger_exists_query, trigger_params).iloc[0]["trigger_count"]
+            )
+            if not trigger_exists:
+                db_execute(trigger_query)
 
 
 def replace_special_characters_with_placeholders(df: pd.DataFrame) -> pd.DataFrame:

@@ -19,6 +19,7 @@ from telegram.ext import (
     filters,
 )
 
+from bot.features import alien_race_command
 from bot.onboarding import (
     cancel,
     collect_dream,
@@ -42,15 +43,15 @@ BOT_TOKEN = config("BOT_TOKEN")
 
 create_database_table("user_actions")
 create_database_table("alien_race_teams")
-create_database_table("threads")
-
+create_database_table("threads")  # need to add a try if trigger already exists during restart etc
+create_database_table("daily_tweet_counts")
+create_database_table("weekly_categories")
 
 dat = db_query("select * from user_actions order by timestamp desc")
 
 
 def main():
     """Main function to start the bot."""
-    create_database_table("user_actions")  # Initialise the database table
 
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
@@ -71,6 +72,8 @@ def main():
     application.add_handler(conversation_handler)
 
     add_replies_handlers(application)
+
+    application.add_handler(CommandHandler("alien_races", alien_race_command))
 
     application.run_polling()
 

@@ -1,8 +1,6 @@
 """
 Created 27 November 2024
-@author:
-@links:
-@description:
+@description: Handles thread creation, replies, and category management for the Telegram bot.
 """
 
 # ┌─────────┐
@@ -56,8 +54,37 @@ TOPICS = [
 
 
 def insert_thread(category, twitter_link, user_id, username, thread_id=None):
-    """Insert a new thread or reply into the database using the pop function."""
-    timestamp = datetime.now(timezone.utc).isoformat()
+    """
+    Insert a new thread or reply into the database using the pop function.
+
+    Args:
+        category (str): The category of the thread. For replies, it will be fetched from the original thread.
+        twitter_link (str): The Twitter link of the thread or reply.
+        user_id (int): The Telegram user ID.
+        username (str): The Telegram username.
+        thread_id (int, optional): The ID of the original thread. None for new threads.
+
+    Returns:
+        int: The ID of the newly inserted thread.
+    """
+    # Adjust timestamp to match database format (without microseconds)
+    timestamp = datetime.now(timezone.utc).replace(microsecond=0).isoformat(sep=" ")
+
+    if thread_id is not None:
+        # Fetch category from the original thread
+        original_thread = db_query(
+            """
+            SELECT category FROM threads
+            WHERE id = :thread_id
+            """,
+            {"thread_id": thread_id},
+        )
+        if original_thread.empty:
+            raise ValueError(f"Original thread with id {thread_id} not found.")
+        category = original_thread.iloc[0]["category"]
+        print(f"Fetched category '{category}' for reply to thread ID {thread_id}.")
+    else:
+        print(f"Creating new thread in category '{category}'.")
 
     data = pd.DataFrame(
         [
@@ -67,28 +94,35 @@ def insert_thread(category, twitter_link, user_id, username, thread_id=None):
                 "thread_id": thread_id,  # None for new threads
                 "user_id": int(user_id),
                 "username": username,
-                "category": category if thread_id is None else None,  # Only for new threads
+                "category": category,
                 "twitter_link": twitter_link,
             }
         ]
     )
 
-    pop(data, "threads")
+    # Insert the thread or reply
+    try:
+        pop(data, "threads")
+        print(f"Inserted thread with Twitter link: {twitter_link}")
+    except Exception as e:
+        print(f"Error inserting thread: {e}")
+        return None  # Or handle accordingly
 
-    # Optionally retrieve the new thread's ID
+    # Retrieve the new thread's ID without relying on exact timestamp
     new_thread_df = db_query(
         """
         SELECT id FROM threads
-        WHERE twitter_link = :twitter_link AND user_id = :user_id
-        ORDER BY timestamp DESC LIMIT 1
+        WHERE user_id = :user_id AND twitter_link = :twitter_link
+        ORDER BY id DESC LIMIT 1
         """,
-        {"twitter_link": twitter_link, "user_id": int(user_id)},
+        {"user_id": user_id, "twitter_link": twitter_link},
     )
 
     if new_thread_df.empty:
         raise ValueError("Failed to insert thread.")
 
     new_thread_id = int(new_thread_df.iloc[0]["id"])
+    print(f"New thread ID: {new_thread_id}")
     return new_thread_id
 
 
@@ -133,6 +167,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         """,
         {"time_threshold": time_threshold_str},
     )
+    print(f"Fetched {len(threads_df)} original threads from the last 24 hours.")
 
     # Get all thread IDs that the user has replied to
     user_replies_df = db_query(
@@ -145,6 +180,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     replied_thread_ids = set(user_replies_df["thread_id"].tolist())
+    print(f"User {user_id} has replied to threads: {replied_thread_ids}")
 
     # Get all thread IDs that the user has created
     user_created_threads_df = db_query(
@@ -157,6 +193,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     user_created_thread_ids = set(user_created_threads_df["id"].tolist())
+    print(f"User {user_id} has created threads: {user_created_thread_ids}")
 
     # Now, for each topic, determine if there are unreplied threads
     topic_has_unreplied = {}
@@ -168,8 +205,10 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         unreplied_thread_ids = topic_thread_ids - replied_thread_ids - user_created_thread_ids
         if unreplied_thread_ids:
             topic_has_unreplied[topic] = True
+            print(f"Topic '{topic}' has {len(unreplied_thread_ids)} unreplied threads.")
         else:
             topic_has_unreplied[topic] = False
+            print(f"Topic '{topic}' has no unreplied threads.")
 
     # Create the keyboard with two buttons per row and add 🌱 emoji where needed
     keyboard = []
@@ -183,7 +222,7 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append(row)
 
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.effective_message.reply_text("Choose a topic:", reply_markup=reply_markup)
+    await update.effective_message.reply_text("Topics:", reply_markup=reply_markup)
 
 
 async def topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -209,6 +248,7 @@ async def topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {"category": category, "time_threshold": time_threshold_str},
         )
     )
+    print(f"Fetched {len(threads_df)} threads in category '{category}'.")
 
     # Retrieve thread IDs that the user has replied to
     replied_thread_ids = set(
@@ -221,14 +261,22 @@ async def topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             {"user_id": user_id},
         )["thread_id"].tolist()
     )
+    print(f"User {user_id} has replied to threads: {replied_thread_ids}")
 
     # Delete the previous message (the one with the topic selection)
     await query.message.delete()
 
+    # Send a heading with a border
+    heading_text = f"───────────\n*{category}*\n───────────"
+    await query.message.chat.send_message(
+        heading_text,
+        parse_mode=ParseMode.MARKDOWN,
+    )
+
     # Provide the option to create a new thread and go back to menu
     keyboard = [
         [
-            InlineKeyboardButton("Create New Thread", callback_data=f"create_thread_{category}"),
+            InlineKeyboardButton("Create 🧵", callback_data=f"create_thread_{category}"),
             InlineKeyboardButton("Back to Topics", callback_data="back_to_menu"),
         ]
     ]
@@ -255,20 +303,22 @@ async def topic_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 # Disable the "Submit Reply" button by providing empty callback data
                 submit_reply_button = InlineKeyboardButton("Already Replied", callback_data="noop")
                 reply_markup_thread = InlineKeyboardMarkup([[reply_button, submit_reply_button]])
+                print(f"Thread ID {thread_id} already replied by user {user_id}.")
             else:
                 # User has not replied to this thread
-                reply_button = InlineKeyboardButton("Reply", url=xcom_tweet_link)
+                reply_button = InlineKeyboardButton("Reply 𝕏", url=xcom_tweet_link)
                 submit_reply_button = InlineKeyboardButton(
                     "Submit Reply", callback_data=f"reply_thread_{thread_id}"
                 )
                 reply_markup_thread = InlineKeyboardMarkup([[reply_button, submit_reply_button]])
+                print(f"Thread ID {thread_id} available for reply by user {user_id}.")
 
             # Send the link as a message with the reply buttons
             await query.message.chat.send_message(vxtwitter_link, reply_markup=reply_markup_thread)
 
         # Send the message with the selection buttons
         await query.message.chat.send_message(
-            "Select an option:",
+            "Or:",
             reply_markup=reply_markup,
         )
 
@@ -278,6 +328,8 @@ async def reply_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     thread_id = int(query.data.split("_", 2)[2])
     user_id = query.from_user.id
+
+    print(f"User {user_id} is attempting to reply to thread ID {thread_id}.")
 
     # Check if the user has already replied to this thread
     existing_reply = db_query(
@@ -290,6 +342,7 @@ async def reply_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if not existing_reply.empty:
         await query.answer("You have already replied to this thread.", show_alert=True)
+        print(f"User {user_id} has already replied to thread ID {thread_id}.")
         return
 
     await query.answer()
@@ -305,6 +358,7 @@ async def reply_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Store the message ID to delete it later
     context.user_data["prompt_message_id"] = prompt_message.message_id
+    print(f"Prompted user {user_id} to paste their reply URL.")
 
 
 async def create_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -324,12 +378,16 @@ async def create_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Store the message ID to delete it later
     context.user_data["prompt_message_id"] = prompt_message.message_id
+    print(f"Prompted user {query.from_user.id} to paste their new thread URL.")
 
 
 async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle user inputs for creating threads or replying."""
     user_input = update.message.text.strip()
     action = context.user_data.get("action")
+
+    user_id = update.message.from_user.id
+    username = update.message.from_user.username or "Unknown"
 
     if action == "create_thread":
         # Delete the prompt message and user's reply to keep the chat clean
@@ -341,19 +399,30 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         category = context.user_data["category"]
-        user = update.message.from_user
         # Convert user input to x.com link for storage
         xcom_link = get_xcom_link(user_input)
-        insert_thread(
+
+        # Insert the new thread
+        new_thread_id = insert_thread(
             category=category,
             twitter_link=xcom_link,
-            user_id=user.id,
-            username=user.username,
+            user_id=user_id,
+            username=username,
         )
-        await update.message.chat.send_message(
-            f"Your thread has been created in *{category}*.",
-            parse_mode=ParseMode.MARKDOWN,
-        )
+
+        if new_thread_id:
+            await update.message.chat.send_message(
+                f"Your thread has been created in *{category}*.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            print(f"User {user_id} created new thread ID {new_thread_id} in category '{category}'.")
+        else:
+            await update.message.chat.send_message(
+                "There was an error creating your thread. Please try again.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            print(f"Failed to create thread for user {user_id}.")
+
         context.user_data.clear()
 
     elif action == "reply":
@@ -366,22 +435,33 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         thread_id = context.user_data["thread_id"]
-        user = update.message.from_user
         # Convert user input to x.com link for storage
         xcom_link = get_xcom_link(user_input)
+
         # Insert the reply
-        insert_thread(
-            category=None,  # Not needed for replies
+        new_reply_id = insert_thread(
+            category=None,  # Not needed for replies as it's fetched from the original thread
             twitter_link=xcom_link,
-            user_id=user.id,
-            username=user.username,
+            user_id=user_id,
+            username=username,
             thread_id=thread_id,
         )
-        await update.message.chat.send_message("Your reply has been posted.")
+
+        if new_reply_id:
+            await update.message.chat.send_message("Your reply has been posted.")
+            print(f"User {user_id} replied to thread ID {thread_id} with reply ID {new_reply_id}.")
+        else:
+            await update.message.chat.send_message(
+                "There was an error posting your reply. Please try again.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            print(f"Failed to post reply for user {user_id} to thread ID {thread_id}.")
+
         context.user_data.clear()
     else:
         # Handle unexpected user inputs
         await update.message.reply_text("Please select an action from the menu.")
+        print(f"User {user_id} sent unexpected input: {user_input}")
 
 
 async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -391,11 +471,13 @@ async def back_to_menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Delete the previous message if needed
     await query.message.delete()
     await menu(update, context)
+    print(f"User {query.from_user.id} navigated back to the main menu.")
 
 
 async def noop(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """No operation callback handler."""
     await update.callback_query.answer()
+    print("Received noop callback.")
 
 
 def add_replies_handlers(application):
