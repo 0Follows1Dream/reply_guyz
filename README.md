@@ -27,10 +27,11 @@ BOT_URL=
 ```
 ### Prepare installation 
 ```shell
-git clone ... # clone the repo 
+git clone git@github.com:0Follows1Dream/reply_guyz.git # clone the repo 
 cd reply_guyz # enter directory 
-chmod +x /scripts/load_env_vars # automate the loading of env vars from .env 
-source ./startup/load_env_vars # load the env vars into current shell 
+touch .env
+chmod +x /startup/local/load_env_vars.sh # automate the loading of env vars from .env 
+source ./startup/load_env_vars.sh # load the env vars into current shell 
 docker-compose up -d --build # builder the docker container in detached mode 
 ```
 
