@@ -26,13 +26,35 @@ BOT_TOKEN=
 BOT_URL=
 ```
 ### Prepare installation 
+
+## Requirements
+- Ubuntu 24.04.1
+ 
 ```shell
+sudo apt update
+sudo apt install \
+    ca-certificates \
+    curl \
+    gnupg
+sudo install -m 0755 -d /etc/apt/keyrings
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | \
+sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+sudo chmod a+r /etc/apt/keyrings/docker.gpg
+echo \
+  "deb [arch=$(dpkg --print-architecture) \
+  signed-by=/etc/apt/keyrings/docker.gpg] \
+  https://download.docker.com/linux/ubuntu \
+  $(lsb_release -cs) stable" | \
+sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt update
+sudo apt install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+
 git clone git@github.com:0Follows1Dream/reply_guyz.git # clone the repo 
 cd reply_guyz # enter directory 
 touch .env
 chmod +x /startup/local/load_env_vars.sh # automate the loading of env vars from .env 
-source ./startup/load_env_vars.sh # load the env vars into current shell 
-docker-compose up -d --build # builder the docker container in detached mode 
+source ./startup/local/load_env_vars.sh # load the env vars into current shell 
+sudo docker compose up --build -d # builder the docker container in detached mode 
 ```
 
 

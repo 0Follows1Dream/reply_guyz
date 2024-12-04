@@ -42,3 +42,4 @@ ENV CHROMEDRIVER_PATH=/usr/local/bin/chromedriver
 
 # Define the command to run your application
 CMD ["python3", "-u", "main.py"]
+# CMD ["python", "-m", "bot.main"]
