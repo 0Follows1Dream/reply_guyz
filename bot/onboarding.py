@@ -18,7 +18,7 @@ import pandas as pd
 from telegram import InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.ext import ContextTypes, ConversationHandler
 
-from utils.db import pop
+from utils.db import db_query, pop
 from utils.general import load_template_json, load_template_msg
 
 # ┌─────────────────────┐
@@ -294,6 +294,26 @@ async def collect_twitter_username(update: Update, context: ContextTypes.DEFAULT
     """Handles the user's Twitter username submission."""
     user = update.effective_user
     twitter_username = update.message.text.strip().lstrip("@")  # Remove any '@' if present
+
+    # Check if the Twitter username has already been claimed by someone else
+    existing_user = db_query(
+        """
+        SELECT user_id FROM user_actions
+        WHERE action = 'twitter_username' AND output = :twitter_username
+        """,
+        {"twitter_username": twitter_username},
+    )
+
+    if not existing_user.empty:
+        existing_user_id = existing_user.iloc[0]["user_id"]
+        if existing_user_id != user.id:
+            # The username has been claimed by someone else
+            await update.message.reply_text(
+                f"🚫 The Twitter username @{twitter_username} has already been claimed by another user. "
+                "Please enter a different Twitter username."
+            )
+            # Optionally, re-prompt the user to enter their Twitter username
+            return "COLLECT_TWITTER_USERNAME"
 
     # Log the Twitter username in user_actions
     log_user_action(

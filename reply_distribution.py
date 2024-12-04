@@ -45,12 +45,8 @@ all_categories_weekly_bonus_multiplier = 2
 
 # swarm day multiplier
 swarm_day_multiplier = 5
-swarm_day_tweet_target = 5
+swarm_day_tweet_target = 10
 swarm_days = ["Wed", "Fri"]
-
-db_query(
-    "select timestamp, user_id, action, output from user_actions where action in ('alien_race', 'twitter_username');"
-)
 
 
 # to track the challenges progress i need tables that
@@ -84,6 +80,13 @@ print(
     f"Number of years supply if all users hit max multiplier every week: {round(number_of_weeks_supply/52/max_multiplier, 2)}"
 )
 
+
+# clean the dataset to ensure the only tweets that are considered are the ones that are from those tied to handle
+tweets = db_query("select * from threads")
+
+alien_info = db_query(
+    "select timestamp, user_id, action, output from user_actions where action in ('alien_race', 'twitter_username');"
+).pivot(index=["timestamp", "user_id"], columns="action")
 
 # ┌───────────────────┐
 # │ Program functions │

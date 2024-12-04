@@ -356,15 +356,37 @@ def create_database_table(table_name: str):
             (
                 "update_daily_tweet_counts",
                 """
-                        CREATE TRIGGER update_daily_tweet_counts
-                        AFTER INSERT ON threads
-                        FOR EACH ROW
-                        BEGIN
-                            INSERT INTO daily_tweet_counts (user_id, timestamp, tweet_count)
-                            VALUES (NEW.user_id, DATE(NEW.timestamp), 1)
-                            ON DUPLICATE KEY UPDATE
-                                tweet_count = tweet_count + 1;
-                        END;
+                CREATE TRIGGER update_daily_tweet_counts
+                AFTER INSERT ON threads
+                FOR EACH ROW
+                BEGIN
+                    DECLARE tweet_username VARCHAR(255);
+                    DECLARE most_recent_username VARCHAR(255);
+                    DECLARE url_without_domain VARCHAR(255);
+
+                    -- Extract the username from NEW.twitter_link
+                    -- Remove the domain part to get the path
+                    SET url_without_domain = SUBSTRING(NEW.twitter_link, LENGTH('https://x.com/') + 1);
+
+                    -- Get the username, which is the first part of the path before any '/'
+                    SET tweet_username = SUBSTRING_INDEX(url_without_domain, '/', 1);
+
+                    -- Fetch the most recent Twitter username provided by the user
+                    SELECT output INTO most_recent_username
+                    FROM user_actions
+                    WHERE user_id = NEW.user_id AND action = 'twitter_username'
+                    ORDER BY timestamp DESC
+                    LIMIT 1;
+
+                    -- Compare the extracted username with the most recent username
+                    IF tweet_username = most_recent_username THEN
+                        -- Update the daily_tweet_counts table
+                        INSERT INTO daily_tweet_counts (user_id, timestamp, tweet_count)
+                        VALUES (NEW.user_id, DATE(NEW.timestamp), 1)
+                        ON DUPLICATE KEY UPDATE
+                            tweet_count = tweet_count + 1;
+                    END IF;
+                END;
                         """,
             ),
             (

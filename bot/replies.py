@@ -21,6 +21,7 @@ from telegram.ext import (
     filters,
 )
 
+from utils.data_checks import check_url
 from utils.db import db_query, pop
 
 # ┌────────────┐
@@ -390,6 +391,27 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     username = update.message.from_user.username or "Unknown"
 
     if action == "create_thread":
+        # Validate the URL
+        if not check_url(user_input):
+            # Delete the user's invalid message
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id, message_id=update.message.message_id
+            )
+            # Optionally delete the previous prompt message
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id, message_id=context.user_data["prompt_message_id"]
+            )
+            # Inform the user and re-prompt
+            force_reply = ForceReply(selective=True)
+            prompt_message = await update.message.chat.send_message(
+                "The URL you provided is not formatted correctly. Please try again:",
+                reply_markup=force_reply,
+            )
+            # Store the new prompt message ID
+            context.user_data["prompt_message_id"] = prompt_message.message_id
+            print(f"User {user_id} provided invalid URL for creating thread: {user_input}")
+            return  # Do not proceed further
+
         # Delete the prompt message and user's reply to keep the chat clean
         await context.bot.delete_message(
             chat_id=update.effective_chat.id, message_id=context.user_data["prompt_message_id"]
@@ -426,6 +448,27 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data.clear()
 
     elif action == "reply":
+        # Validate the URL
+        if not check_url(user_input):
+            # Delete the user's invalid message
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id, message_id=update.message.message_id
+            )
+            # Optionally delete the previous prompt message
+            await context.bot.delete_message(
+                chat_id=update.effective_chat.id, message_id=context.user_data["prompt_message_id"]
+            )
+            # Inform the user and re-prompt
+            force_reply = ForceReply(selective=True)
+            prompt_message = await update.message.chat.send_message(
+                "The URL you provided is not formatted correctly. Please try again:",
+                reply_markup=force_reply,
+            )
+            # Store the new prompt message ID
+            context.user_data["prompt_message_id"] = prompt_message.message_id
+            print(f"User {user_id} provided invalid URL for replying: {user_input}")
+            return  # Do not proceed further
+
         # Delete the prompt message and user's reply to keep the chat clean
         await context.bot.delete_message(
             chat_id=update.effective_chat.id, message_id=context.user_data["prompt_message_id"]
