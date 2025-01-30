@@ -56,24 +56,27 @@ def main():
     application = ApplicationBuilder().token(BOT_TOKEN).build()
 
     conversation_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
+        entry_points=[CommandHandler("start", start, filters=filters.ChatType.PRIVATE)],
         states={
             "DREAM_PROMPT": [CallbackQueryHandler(dream_prompt, pattern="^agree$")],
-            "COLLECT_DREAM": [MessageHandler(filters.TEXT & ~filters.COMMAND, collect_dream)],
+            "COLLECT_DREAM": [MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, collect_dream)],
             "QUIZ_QUESTION": [CallbackQueryHandler(handle_quiz_answer)],
-            # Add the new state here
             "COLLECT_TWITTER_USERNAME": [
-                MessageHandler(filters.TEXT & ~filters.COMMAND, collect_twitter_username)
+                MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, collect_twitter_username)
             ],
         },
-        fallbacks=[CommandHandler("cancel", cancel)],
+        fallbacks=[CommandHandler("cancel", cancel, filters=filters.ChatType.PRIVATE)],
+        conversation_timeout=300,
+        per_message=False,
+        per_chat=True,
+        per_user=True
     )
 
     application.add_handler(conversation_handler)
 
     add_replies_handlers(application)
 
-    application.add_handler(CommandHandler("alien_races", alien_race_command))
+    application.add_handler(CommandHandler("alien_races", alien_race_command, filters=filters.ChatType.PRIVATE))
 
     application.run_polling()
 
