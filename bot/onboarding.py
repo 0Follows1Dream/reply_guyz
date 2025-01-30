@@ -67,8 +67,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handles the /start command and provides welcome and housekeeping rules."""
     user = update.effective_user
 
-    # Clear user data at the start of the conversation
     context.user_data.clear()
+    context.chat_data.clear()
+
+    if "conversation_key" in context.user_data:
+        del context.user_data["conversation_key"]
 
     log_user_action(user.id, user.username, "start", "User started the bot", "Welcome message sent")
 

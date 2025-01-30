@@ -23,6 +23,7 @@ from telegram.ext import (
 
 from utils.data_checks import check_url
 from utils.db import db_query, pop
+from decouple import config
 
 # ┌────────────┐
 # │ Parameters │
@@ -42,6 +43,15 @@ TOPICS = [
     "Roadmap",
     "Schizo",
 ]
+
+# Alien race emojis
+RACE_EMOJIS = {
+    "Wuffz": "🐕",
+    "Avianz": "🦅",
+    "Greyz": "👽",
+    "Meowz": "😺",
+    "Reptoidz": "🦎"
+}
 
 # ┌───────────────────┐
 # │ Program functions │
@@ -196,29 +206,26 @@ async def menu(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_created_thread_ids = set(user_created_threads_df["id"].tolist())
     print(f"User {user_id} has created threads: {user_created_thread_ids}")
 
-    # Now, for each topic, determine if there are unreplied threads
-    topic_has_unreplied = {}
+    # Now, for each topic, determine if there are unreplied threads and count them
+    topic_unreplied_counts = {}
     for topic in TOPICS:
         # Get thread IDs in this topic
         topic_threads = threads_df[threads_df["category"] == topic]
         topic_thread_ids = set(topic_threads["id"].tolist())
         # Compute unreplied thread IDs, excluding user's threads
         unreplied_thread_ids = topic_thread_ids - replied_thread_ids - user_created_thread_ids
-        if unreplied_thread_ids:
-            topic_has_unreplied[topic] = True
-            print(f"Topic '{topic}' has {len(unreplied_thread_ids)} unreplied threads.")
-        else:
-            topic_has_unreplied[topic] = False
-            print(f"Topic '{topic}' has no unreplied threads.")
+        topic_unreplied_counts[topic] = len(unreplied_thread_ids)
+        print(f"Topic '{topic}' has {len(unreplied_thread_ids)} unreplied threads.")
 
-    # Create the keyboard with two buttons per row and add 🌱 emoji where needed
+    # Create the keyboard with two buttons per row and add count + 🌱 emoji where needed
     keyboard = []
     for i in range(0, len(TOPICS), 2):
         row = []
         for topic in TOPICS[i : i + 2]:
             display_text = topic
-            if topic_has_unreplied.get(topic):
-                display_text += " 🌱"
+            unreplied_count = topic_unreplied_counts[topic]
+            if unreplied_count > 0:
+                display_text = f"({unreplied_count}) {topic} 🌱"
             row.append(InlineKeyboardButton(display_text, callback_data=f"topic_{topic}"))
         keyboard.append(row)
 
@@ -382,6 +389,85 @@ async def create_thread(update: Update, context: ContextTypes.DEFAULT_TYPE):
     print(f"Prompted user {query.from_user.id} to paste their new thread URL.")
 
 
+def get_user_race_info(user_id: int) -> tuple[str, int]:
+    """
+    Get user's alien race and total number of members in that race.
+
+    Args:
+        user_id (int): The Telegram user ID
+
+    Returns:
+        tuple[str, int]: (alien_race, total_members_in_race)
+    """
+
+    user_race_df = db_query(
+        """
+        SELECT alien_race
+        FROM alien_race_teams
+        WHERE user_id = :user_id
+        """,
+        {"user_id": user_id}
+    )
+
+    if user_race_df.empty:
+        return "Unknown Race", 0
+
+    user_race = user_race_df.iloc[0]["alien_race"]
+
+    race_count_df = db_query(
+        """
+        SELECT COUNT(*) as count
+        FROM alien_race_teams
+        WHERE alien_race = :race
+        """,
+        {"race": user_race}
+    )
+
+    total_members = race_count_df.iloc[0]["count"]
+    return user_race, total_members
+
+
+async def send_group_notification(bot, username: str, topic: str, user_id: int, tweet_url: str):
+    """
+    Send notification to the public group about new thread/reply.
+
+    Args:
+        bot: The telegram bot instance
+        username (str): User's telegram username
+        topic (str): The topic category
+        user_id (int): User's telegram ID
+        tweet_url (str): URL of the tweet
+    """
+    group_chat_id = config("GROUP_CHAT_ID")
+
+    # Get user's race and race member count
+    race, total_members = get_user_race_info(user_id)
+
+    # Get race emoji
+    race_emoji = RACE_EMOJIS.get(race, "")
+
+    # Escape underscores in the URL for Markdown
+    escaped_url = tweet_url.replace("_", "\\_")
+
+    message = (
+        f"@{username} has just submitted a new reply on *{topic}*.\n\n"
+        f"As a *{race}* {race_emoji}, they are sharing daily *$reply* rewards with *{total_members}* other aliens in this race.\n\n"
+        f"Reply to the following thread to *start earning* your alien share:\n\n"
+        f"{escaped_url}"
+		f"\n\nNew? DM @reply\_guyz\_bot to get started!"
+    )
+
+    try:
+        await bot.send_message(
+            chat_id=group_chat_id,
+            text=message,
+            parse_mode=ParseMode.MARKDOWN,
+            disable_web_page_preview=False
+        )
+    except Exception as e:
+        print(f"Failed to send group notification: {e}")
+
+
 async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle user inputs for creating threads or replying."""
     user_input = update.message.text.strip()
@@ -433,6 +519,15 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         if new_thread_id:
+            # Send notification to the group
+            await send_group_notification(
+                context.bot,
+                username,
+                category,
+                user_id,
+                xcom_link
+            )
+
             await update.message.chat.send_message(
                 f"Your thread has been created in *{category}*.",
                 parse_mode=ParseMode.MARKDOWN,
@@ -483,7 +578,7 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # Insert the reply
         new_reply_id = insert_thread(
-            category=None,  # Not needed for replies as it's fetched from the original thread
+            category=None,  # Category will be fetched from original thread
             twitter_link=xcom_link,
             user_id=user_id,
             username=username,
@@ -491,14 +586,36 @@ async def handle_user_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         if new_reply_id:
-            await update.message.chat.send_message("Your reply has been posted.")
-            print(f"User {user_id} replied to thread ID {thread_id} with reply ID {new_reply_id}.")
-        else:
+            # Get the category of the original thread
+            thread_df = db_query(
+                """
+                SELECT category FROM threads
+                WHERE id = :thread_id
+                """,
+                {"thread_id": thread_id}
+            )
+            topic = thread_df.iloc[0]["category"] if not thread_df.empty else "Unknown Topic"
+
+            # Send notification to the group
+            await send_group_notification(
+                context.bot,
+                username,
+                topic,
+                user_id,
+                xcom_link
+            )
+
             await update.message.chat.send_message(
-                "There was an error posting your reply. Please try again.",
+                "Your reply has been submitted.",
                 parse_mode=ParseMode.MARKDOWN,
             )
-            print(f"Failed to post reply for user {user_id} to thread ID {thread_id}.")
+            print(f"User {user_id} submitted reply ID {new_reply_id} to thread {thread_id}.")
+        else:
+            await update.message.chat.send_message(
+                "There was an error submitting your reply. Please try again.",
+                parse_mode=ParseMode.MARKDOWN,
+            )
+            print(f"Failed to submit reply for user {user_id}.")
 
         context.user_data.clear()
     else:
@@ -526,10 +643,10 @@ async def noop(update: Update, context: ContextTypes.DEFAULT_TYPE):
 def add_replies_handlers(application):
     """Register all handlers for the bot."""
     # Updated command from "menu" to "reply"
-    application.add_handler(CommandHandler("reply", menu))
+    application.add_handler(CommandHandler("reply", menu, filters=filters.ChatType.PRIVATE))
     application.add_handler(CallbackQueryHandler(topic_handler, pattern="^topic_"))
     application.add_handler(CallbackQueryHandler(reply_thread, pattern="^reply_thread_"))
     application.add_handler(CallbackQueryHandler(create_thread, pattern="^create_thread_"))
     application.add_handler(CallbackQueryHandler(back_to_menu, pattern="^back_to_menu$"))
     application.add_handler(CallbackQueryHandler(noop, pattern="^noop$"))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_user_input))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND & filters.ChatType.PRIVATE, handle_user_input))

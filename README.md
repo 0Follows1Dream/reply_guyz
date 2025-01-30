@@ -24,6 +24,7 @@ PYTHONSTARTUP=
 # TELEGRAM BOT
 BOT_TOKEN=
 BOT_URL=
+GROUP_CHAT_ID=  # ID of the public group for notifications (format: -100xxxxxxxxxx)
 ```
 ### Prepare installation 
 
